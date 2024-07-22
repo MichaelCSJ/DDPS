@@ -28,16 +28,20 @@ def train():
     trainer = Trainer(opt, optics_model, recon_model, last_epoch)
 
     # Step
-    total_step = 0 # opt.load_step_start
+    total_step = opt.load_step_start
     debug_step = 0
 
-    train_dataset = CreateBasisDataset(opt, 'selected_train')
+    train_dataset = CreateBasisDataset(opt, 'selected_train_DDPS')
     validation_dataset = CreateBasisDataset(opt, 'selected_test')
 
     dataloader_train = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_threads, pin_memory=True) # drop_last=True
     dataloader_valid = DataLoader(validation_dataset, batch_size=opt.batch_size_valid, num_workers=opt.num_threads, pin_memory=True)
     
     loss_values_for_saving = []
+    
+    # Save initial patterns
+    utils.save_model_pattern(trainer.monitor_light_patterns, 0, total_step, os.path.join(opt.tb_dir, 'patterns'))
+    
     # Training
     for epoch in range(1, opt.n_epoch+1):
 
@@ -60,34 +64,24 @@ def train():
             writer.add_scalar('valid/loss', valid_loss_sum, total_step)
 
         train_loss_sum = 0
-        train_loss_normal_sum = 0
-
-
         for data in tqdm(dataloader_train, leave=False):
             batch_size = len(data['scene'])
-
-            utils.save_model_pattern(trainer.monitor_light_patterns, epoch, total_step, os.path.join(opt.tb_dir, 'patterns'))
-            utils.save_model_position(trainer.monitor_superpixel_positions, epoch, total_step, os.path.join(opt.tb_dir, 'positions'))
 
             # Run a optimization step
             trainer.run_optimizers_one_step(data)
 
             loss_dict = trainer.get_losses()
-            
             loss = sum(loss_dict.values()).data
             train_loss_sum += loss*batch_size
-            loss_normal = loss_dict['normal'].data
-            train_loss_normal_sum += loss_normal*batch_size
-
 
             total_step += batch_size
             debug_step += 1
+            
+            utils.save_model_pattern(trainer.monitor_light_patterns, epoch, total_step, os.path.join(opt.tb_dir, 'patterns'))
             writer.add_scalar('train', loss, total_step)
-
         trainer.run_schedulers_one_step()
 
         writer.add_scalar('train/batch', train_loss_sum/len(train_dataset), total_step)
-        writer.add_scalar('train/batch_normal', train_loss_normal_sum/len(train_dataset), total_step)
         utils.print_training_status(epoch, opt.n_epoch, total_step, debug_step)
     
     loss_np = np.array(loss_values_for_saving)

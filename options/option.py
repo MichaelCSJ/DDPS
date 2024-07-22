@@ -37,10 +37,6 @@ class Options:
         self.parser.add_argument('--lr_light', type=float, default=3e-1)  
         self.parser.add_argument('--lr_decay_light', type=float, default=0.3)  
         self.parser.add_argument('--step_size_light', type=int, default=5)
-        
-        self.parser.add_argument('--lr_superpixel_position', type=float, default=1e-2)  
-        self.parser.add_argument('--lr_decay_superpixel_position', type=float, default=0.3)  
-        self.parser.add_argument('--step_size_superpixel_position', type=int, default=50)
 
         self.parser.add_argument('--fix_light_pattern', action='store_true', default=False)
         self.parser.add_argument('--fix_light_position', action='store_true', default=True)
